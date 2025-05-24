@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV Query Interface</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input { margin: 5px; padding: 5px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+    table { width: 100%; margin-top: 20px; }
+    th { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+
+  <h2>Query CSV Data</h2>
+  <label>Variable: <input type="text" id="variable"></label>
+  <label>Number: <input type="text" id="number"></label>
+  <label>JIRA Id: <input type="text" id="jira"></label>
+  <label>UserName: <input type="text" id="username"></label>
+  <label>Time (yyyy-mm-dd): <input type="text" id="time"></label>
+  <button onclick="filterData()">Search</button>
+  <button onclick="exportCSV()">Export CSV</button>
+
+  <div id="table-container"></div>
+
+  <script>
+    let records = [], filteredData = [];
+
+    Papa.parse("data.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        records = results.data;
+        renderTable(records);
+      }
+    });
+
+    function renderTable(data) {
+      if (data.length === 0) {
+        document.getElementById("table-container").innerHTML = "<p>No matching records found.</p>";
+        return;
+      }
+      let html = "<table><thead><tr>";
+      const keys = Object.keys(data[0]);
+      keys.forEach(k => html += `<th>${k}</th>`);
+      html += "</tr></thead><tbody>";
+
+      data.forEach(row => {
+        html += "<tr>";
+        keys.forEach(k => html += `<td>${row[k]}</td>`);
+        html += "</tr>";
+      });
+
+      html += "</tbody></table>";
+      document.getElementById("table-container").innerHTML = html;
+    }
+
+    function filterData() {
+      const variable = document.getElementById("variable").value.toLowerCase();
+      const number = document.getElementById("number").value.toLowerCase();
+      const jira = document.getElementById("jira").value.toLowerCase();
+      const username = document.getElementById("username").value.toLowerCase();
+      const time = document.getElementById("time").value.toLowerCase();
+
+      filteredData = records.filter(row => {
+        return (!variable || (row["Variable"] || "").toLowerCase().includes(variable)) &&
+               (!number || (row["Number"] || "").toLowerCase().includes(number)) &&
+               (!jira || (row["JIRA Id"] || "").toLowerCase().includes(jira)) &&
+               (!username || (row["UserName"] || "").toLowerCase().includes(username)) &&
+               (!time || (row["Time"] || "").toLowerCase().includes(time));
+      });
+
+      renderTable(filteredData);
+    }
+
+    function exportCSV() {
+      const csv = Papa.unparse(filteredData);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "filtered_data.csv";
+      a.click();
+    }
+  </script>
+
+</body>
+</html>
