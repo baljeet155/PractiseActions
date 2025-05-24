@@ -1,34 +1,159 @@
-body {
-  font-family: Arial;
-  padding: 20px;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV Query Interface</title>
 
-input, label {
-  margin: 5px;
-  padding: 5px;
-}
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
-}
+  <!-- Style -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
 
-.filter-row label {
-  display: flex;
-  flex-direction: column;
-  font-size: 14px;
-}
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: flex-end;
+      margin-bottom: 15px;
+    }
 
-button {
-  margin: 5px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
+    .filter-row label {
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+      min-width: 150px;
+    }
 
-table.dataTable {
-  width: 100% !important;
-  margin-top: 20px;
-}
+    input {
+      padding: 6px;
+    }
+
+    button {
+      margin: 5px 10px 15px 0;
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    table.dataTable {
+      width: 100% !important;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .filter-row label {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Query CSV Data</h2>
+
+  <!-- Filter Inputs -->
+  <div class="filter-row">
+    <label>Variable <input type="text" id="variable"></label>
+    <label>Number <input type="text" id="number"></label>
+    <label>JIRA Id <input type="text" id="jira"></label>
+    <label>UserName <input type="text" id="username"></label>
+    <label>From Time <input type="text" id="fromTime" class="datetime"></label>
+    <label>To Time <input type="text" id="toTime" class="datetime"></label>
+  </div>
+
+  <button onclick="filterData()">Search</button>
+  <button onclick="exportCSV()">Export CSV</button>
+
+  <!-- Table Output -->
+  <div id="table-container"></div>
+
+  <!-- Script -->
+  <script>
+    let records = [], filteredData = [];
+
+    // Initialize date pickers
+    flatpickr(".datetime", {
+      enableTime: true,
+      dateFormat: "Y-m-d H:i"
+    });
+
+    // Load and parse CSV
+    Papa.parse("data.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        records = results.data;
+        filterData(); // Initial display
+      }
+    });
+
+    // Render DataTable
+    function renderTable(data) {
+      $("#table-container").html(`<table id="dataTable" class="display"><thead></thead><tbody></tbody></table>`);
+
+      if (data.length === 0) {
+        $("#dataTable").html("<p>No matching records found.</p>");
+        return;
+      }
+
+      const keys = Object.keys(data[0]);
+      let thead = "<tr>" + keys.map(k => `<th>${k}</th>`).join('') + "</tr>";
+      let tbody = data.map(row => {
+        return "<tr>" + keys.map(k => `<td>${row[k]}</td>`).join('') + "</tr>";
+      }).join('');
+
+      $('#dataTable thead').html(thead);
+      $('#dataTable tbody').html(tbody);
+      $('#dataTable').DataTable();
+    }
+
+    // Filter Function
+    function filterData() {
+      const variable = $("#variable").val().toLowerCase();
+      const number = $("#number").val().toLowerCase();
+      const jira = $("#jira").val().toLowerCase();
+      const username = $("#username").val().toLowerCase();
+      const fromTimeVal = $("#fromTime").val();
+      const toTimeVal = $("#toTime").val();
+
+      const fromTime = fromTimeVal ? new Date(fromTimeVal) : null;
+      const toTime = toTimeVal ? new Date(toTimeVal) : null;
+
+      filteredData = records.filter(row => {
+        const rowTime = new Date(row["Time"]);
+
+        return (!variable || (row["Variable"] || "").toLowerCase().includes(variable)) &&
+               (!number || (row["Number"] || "").toLowerCase().includes(number)) &&
+               (!jira || (row["JIRA Id"] || "").toLowerCase().includes(jira)) &&
+               (!username || (row["UserName"] || "").toLowerCase().includes(username)) &&
+               (!fromTime || rowTime >= fromTime) &&
+               (!toTime || rowTime <= toTime);
+      });
+
+      renderTable(filteredData);
+    }
+
+    // Export Filtered Data
+    function exportCSV() {
+      const csv = Papa.unparse(filteredData);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "filtered_data.csv";
+      a.click();
+    }
+  </script>
+
+</body>
+</html>
