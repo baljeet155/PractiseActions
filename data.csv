@@ -1,0 +1,4 @@
+Variable,Number,JIRA Id,UserName,Time
+CPU,3,JIRA-1234,john_doe,2025-05-24 10:00
+Memory,8,JIRA-5678,jane_smith,2025-05-24 11:00
+Disk,5,JIRA-9876,john_doe,2025-05-23 09:30
