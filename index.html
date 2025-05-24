@@ -1,101 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>CSV Query Interface</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input { margin: 5px; padding: 5px; }
-    table.dataTable { width: 100% !important; margin-top: 20px; }
-  </style>
-</head>
-<body>
+body {
+  font-family: Arial;
+  padding: 20px;
+}
 
-  <h2>Query CSV Data</h2>
-  <label>Variable: <input type="text" id="variable"></label>
-  <label>Number: <input type="text" id="number"></label>
-  <label>JIRA Id: <input type="text" id="jira"></label>
-  <label>UserName: <input type="text" id="username"></label>
-  <label>From Time: <input type="text" id="fromTime" class="datetime"></label>
-  <label>To Time: <input type="text" id="toTime" class="datetime"></label>
-  <button onclick="filterData()">Search</button>
-  <button onclick="exportCSV()">Export CSV</button>
+input, label {
+  margin: 5px;
+  padding: 5px;
+}
 
-  <div id="table-container"></div>
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
 
-  <script>
-    let records = [], filteredData = [];
+.filter-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
 
-    // Initialize datetime pickers
-    flatpickr(".datetime", {
-      enableTime: true,
-      dateFormat: "Y-m-d H:i"
-    });
+button {
+  margin: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
 
-    Papa.parse("data.csv", {
-      download: true,
-      header: true,
-      complete: function(results) {
-        records = results.data;
-        filterData(); // initial render
-      }
-    });
-
-    function renderTable(data) {
-      $("#table-container").html(`<table id="dataTable" class="display"><thead></thead><tbody></tbody></table>`);
-      if (data.length === 0) {
-        $("#dataTable").html("<p>No matching records found.</p>");
-        return;
-      }
-
-      const keys = Object.keys(data[0]);
-      let thead = "<tr>" + keys.map(k => `<th>${k}</th>`).join('') + "</tr>";
-      let tbody = data.map(row => {
-        return "<tr>" + keys.map(k => `<td>${row[k]}</td>`).join('') + "</tr>";
-      }).join('');
-
-      $('#dataTable thead').html(thead);
-      $('#dataTable tbody').html(tbody);
-      $('#dataTable').DataTable();
-    }
-
-    function filterData() {
-      const variable = $("#variable").val().toLowerCase();
-      const number = $("#number").val().toLowerCase();
-      const jira = $("#jira").val().toLowerCase();
-      const username = $("#username").val().toLowerCase();
-      const fromTime = new Date($("#fromTime").val());
-      const toTime = new Date($("#toTime").val());
-
-      filteredData = records.filter(row => {
-        const rowTime = new Date(row["Time"]);
-        return (!variable || (row["Variable"] || "").toLowerCase().includes(variable)) &&
-               (!number || (row["Number"] || "").toLowerCase().includes(number)) &&
-               (!jira || (row["JIRA Id"] || "").toLowerCase().includes(jira)) &&
-               (!username || (row["UserName"] || "").toLowerCase().includes(username)) &&
-               (!isNaN(fromTime.getTime()) ? rowTime >= fromTime : true) &&
-               (!isNaN(toTime.getTime()) ? rowTime <= toTime : true);
-      });
-
-      renderTable(filteredData);
-    }
-
-    function exportCSV() {
-      const csv = Papa.unparse(filteredData);
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "filtered_data.csv";
-      a.click();
-    }
-  </script>
-
-</body>
-</html>
+table.dataTable {
+  width: 100% !important;
+  margin-top: 20px;
+}
