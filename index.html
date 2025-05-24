@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Query CSV Records</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, select { margin: 5px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+    table { width: 100%; margin-top: 20px; }
+    th { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+
+  <h2>Search Records</h2>
+  <label>Value: <input type="text" id="value"></label>
+  <label>JIRA Id:
+    <select id="jiraDropdown"><option value="">--Select--</option></select>
+  </label>
+  <label>UserName:
+    <select id="userDropdown"><option value="">--Select--</option></select>
+  </label>
+  <label>From Date: <input type="date" id="fromDate"></label>
+  <label>To Date: <input type="date" id="toDate"></label>
+  <button onclick="filterData()">Search</button>
+  <button onclick="exportCSV()">Export CSV</button>
+
+  <div id="table-container"></div>
+
+  <script>
+    let records = [], filteredData = [];
+
+    Papa.parse("data.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        records = results.data;
+        populateDropdown("jiraDropdown", "JIRA Id");
+        populateDropdown("userDropdown", "UserName");
+        renderTable(records);
+      }
+    });
+
+    function populateDropdown(id, key) {
+      const values = [...new Set(records.map(row => row[key]).filter(Boolean))].sort();
+      const dropdown = document.getElementById(id);
+      values.forEach(val => {
+        const option = document.createElement("option");
+        option.value = val;
+        option.textContent = val;
+        dropdown.appendChild(option);
+      });
+    }
+
+    function renderTable(data) {
+      if (data.length === 0) {
+        document.getElementById("table-container").innerHTML = "<p>No matching records found.</p>";
+        return;
+      }
+      let html = "<table><thead><tr>";
+      const keys = Object.keys(data[0]);
+      keys.forEach(k => html += `<th>${k}</th>`);
+      html += "</tr></thead><tbody>";
+
+      data.forEach(row => {
+        html += "<tr>";
+        keys.forEach(k => html += `<td>${row[k]}</td>`);
+        html += "</tr>";
+      });
+
+      html += "</tbody></table>";
+      document.getElementById("table-container").innerHTML = html;
+    }
+
+    function filterData() {
+      const val = document.getElementById("value").value.toLowerCase();
+      const jira = document.getElementById("jiraDropdown").value.toLowerCase();
+      const user = document.getElementById("userDropdown").value.toLowerCase();
+      const from = new Date(document.getElementById("fromDate").value);
+      const to = new Date(document.getElementById("toDate").value);
+
+      filteredData = records.filter(row => {
+        const time = new Date(row["Time"]);
+        return (!val || JSON.stringify(row).toLowerCase().includes(val)) &&
+               (!jira || (row["JIRA Id"] || "").toLowerCase() === jira) &&
+               (!user || (row["UserName"] || "").toLowerCase() === user) &&
+               (!isNaN(from) ? time >= from : true) &&
+               (!isNaN(to) ? time <= to : true);
+      });
+
+      renderTable(filteredData);
+    }
+
+    function exportCSV() {
+      const csv = Papa.unparse(filteredData);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "filtered_data.csv";
+      a.click();
+    }
+  </script>
+
+</body>
+</html>
